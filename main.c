@@ -48,6 +48,7 @@ int main(int argc, char* argv[]) {
         items_in++;
         dir = readdir(d);
       }
+      free(d);
       free(items);
     }
   }
