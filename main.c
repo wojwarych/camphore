@@ -1,31 +1,11 @@
+#include "file_items.h"
 #include <dirent.h>
-#include <stdbool.h>
 #include <stdint.h>
 #include <stdio.h>
 #include <stdlib.h>
-#include <string.h>
 #include <sys/stat.h>
 
-int get_int_len(int value) {
-  int l = 1;
-  while (value > 9) {
-    l++;
-    value /= 10;
-  }
-  return l;
-}
-
-typedef struct {
-  char *name;
-  bool is_dir;
-} Item;
-
-int comp(const void *a, const void *b) {
-  Item *x = (Item *)a;
-  Item *y = (Item *)b;
-
-  return (strcmp(x->name, y->name));
-}
+int get_int_len(int);
 
 int main(int argc, char *argv[]) {
   if (argc == 1) {
@@ -77,4 +57,13 @@ int main(int argc, char *argv[]) {
   }
 
   return 0;
+}
+
+int get_int_len(int value) {
+  int l = 1;
+  while (value > 9) {
+    l++;
+    value /= 10;
+  }
+  return l;
 }
