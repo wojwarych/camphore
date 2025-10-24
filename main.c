@@ -6,6 +6,7 @@
 #include <sys/stat.h>
 
 int get_int_len(int);
+Item *resize_arr(Item **, int *, int *);
 
 int main(int argc, char *argv[]) {
   if (argc == 1) {
@@ -24,9 +25,7 @@ int main(int argc, char *argv[]) {
       struct dirent *dir = readdir(d);
       while (dir != NULL) {
         if (items_in == items_size) {
-          items_size += 1;
-          items_size = (int)items_size * 2;
-          items = realloc(items, (sizeof(Item) * items_size));
+          items = resize_arr(&items, &items_in, &items_size);
           if (items == NULL) {
             return -1;
           }
@@ -66,4 +65,11 @@ int get_int_len(int value) {
     value /= 10;
   }
   return l;
+}
+
+Item *resize_arr(Item **items, int *items_in, int *items_size) {
+  *items_size += 1;
+  *items_size = (int)*items_size * 2;
+  *items = realloc(*items, (sizeof(Item) * *items_size));
+  return *items;
 }
