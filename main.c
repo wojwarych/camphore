@@ -99,7 +99,9 @@ int main(int argc, char *argv[]) {
     puts(string);
 
     free(d);
+    free(items->items);
     free(items);
+    free(string);
   }
   return 0;
 }
