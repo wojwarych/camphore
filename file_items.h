@@ -13,5 +13,7 @@ typedef struct {
 
 int comp(const void *a, const void *b);
 Item new_item(char *, bool, __mode_t, intmax_t);
+unsigned short int permissions_mask(Item);
+bool is_executable_file(unsigned short int);
 
 #endif

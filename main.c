@@ -127,12 +127,25 @@ char *print_items(ItemArr items, bool list_mode) {
                output_size - strlen(output_data), "\033[96m%s\033[0m  ",
                item.name);
     } else if (!item.is_dir && list_mode) {
-      snprintf(output_data + strlen(output_data),
-               output_size - strlen(output_data), "%jd\t%s\n", item.size,
-               item.name);
+      if (is_executable_file(permissions_mask(item))) {
+        const char fmt[] = "%jd\t\033[92m%s\033[0m\n";
+        snprintf(output_data + strlen(output_data),
+                 output_size - strlen(output_data), fmt, item.size, item.name);
+      } else {
+        const char fmt[] = "%jd\t%s\n";
+        snprintf(output_data + strlen(output_data),
+                 output_size - strlen(output_data), fmt, item.size, item.name);
+      }
     } else {
-      snprintf(output_data + strlen(output_data),
-               output_size - strlen(output_data), "%s  ", item.name);
+      if (is_executable_file(permissions_mask(item))) {
+        const char fmt[] = "\033[92m%s\033[0m ";
+        snprintf(output_data + strlen(output_data),
+                 output_size - strlen(output_data), fmt, item.name);
+      } else {
+        const char fmt[] = "%s ";
+        snprintf(output_data + strlen(output_data),
+                 output_size - strlen(output_data), fmt, item.name);
+      }
     }
   }
 
