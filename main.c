@@ -1,75 +1,140 @@
 #include "file_items.h"
 #include <dirent.h>
+#include <getopt.h>
 #include <stdint.h>
 #include <stdio.h>
 #include <stdlib.h>
-#include <sys/stat.h>
+#include <string.h>
+#include <unistd.h>
 
-int get_int_len(int);
-Item *resize_arr(Item **, int *, int *);
+typedef enum { LIST = 'l', ALL = 'a', RECURSIVE = 'R' } MODE;
+
+typedef struct {
+  Item *items;
+  int items_length;
+  int items_size;
+} ItemArr;
+
+ItemArr *resize_arr(ItemArr *);
+
+char *print_items(ItemArr, bool);
+
+ItemArr *iterate_items(DIR *d, bool all_mode) {
+  if (d == NULL) {
+    return NULL;
+  } else {
+
+    ItemArr *items = malloc(sizeof(ItemArr));
+    Item *item = malloc(sizeof(Item));
+    items->items = item;
+    if (items == NULL) {
+      return NULL;
+    }
+    items->items_size = 1;
+    items->items_length = 0;
+
+    struct dirent *dir = readdir(d);
+    while (dir != NULL) {
+      if ((strcmp(dir->d_name, ".") == 0 || strcmp(dir->d_name, "..") == 0) &&
+          !all_mode) {
+        dir = readdir(d);
+        continue;
+      }
+      if (items->items_length == items->items_size) {
+        items = resize_arr(items);
+        if (items == NULL) {
+          return NULL;
+        }
+      }
+
+      struct stat path_stat;
+      stat(dir->d_name, &path_stat);
+      Item item = new_item(dir->d_name, S_ISDIR(path_stat.st_mode),
+                           path_stat.st_mode, (intmax_t)path_stat.st_size);
+      items->items[items->items_length] = item;
+      items->items_length++;
+      dir = readdir(d);
+    }
+
+    qsort(items->items, items->items_length, sizeof(Item), comp);
+
+    return items;
+  }
+}
 
 int main(int argc, char *argv[]) {
-  if (argc == 1) {
-    DIR *d = opendir(".");
-    if (d == NULL) {
-      return -1;
-    } else {
-
-      Item *items = malloc(sizeof(Item));
-      if (items == NULL) {
-        return -1;
-      }
-
-      int items_in = 0;
-      int items_size = 1;
-      struct dirent *dir = readdir(d);
-      while (dir != NULL) {
-        if (items_in == items_size) {
-          items = resize_arr(&items, &items_in, &items_size);
-          if (items == NULL) {
-            return -1;
-          }
-        }
-
-        Item item = {.name = dir->d_name, .is_dir = false};
-        items[items_in] = item;
-        items_in++;
-        dir = readdir(d);
-      }
-
-      qsort(items, items_in, sizeof(Item), comp);
-
-      for (int i = 0; i < items_in; i++) {
-        struct stat path_stat;
-        stat(items[i].name, &path_stat);
-        if S_ISDIR (path_stat.st_mode) {
-          printf("\033[96m%s\t%jd\033[0m\n", items[i].name,
-                 (intmax_t)path_stat.st_size);
-        } else {
-          printf("%s\t%jd\n", items[i].name, (intmax_t)path_stat.st_size);
-        }
-      }
-
-      free(d);
-      free(items);
+  int opt;
+  bool list_mode = false;
+  bool all_mode = false;
+  bool recursive = false;
+  while ((opt = getopt(argc, argv, "lRa")) != -1) {
+    switch (opt) {
+    case 'l':
+      list_mode = true;
+      break;
+    case 'a':
+      all_mode = true;
+      break;
+    case 'R':
+      recursive = true;
+      break;
+    default:
+      printf("None valid option provided!\n");
+      break;
     }
   }
 
+  char *dirpath;
+  if (argv[optind] == NULL) {
+    dirpath = ".";
+  } else {
+    dirpath = argv[optind];
+  }
+
+  DIR *d = opendir(dirpath);
+  ItemArr *items = iterate_items(d, all_mode);
+  if (items != NULL) {
+
+    char *string = print_items(*items, list_mode);
+    puts(string);
+
+    free(d);
+    free(items);
+  }
   return 0;
 }
 
-int get_int_len(int value) {
-  int l = 1;
-  while (value > 9) {
-    l++;
-    value /= 10;
-  }
-  return l;
+ItemArr *resize_arr(ItemArr *items) {
+  items->items_size += 1;
+  items->items_size = items->items_size * 2;
+  items->items = realloc(items->items, (sizeof(Item) * items->items_size));
+  return items;
 }
 
-Item *resize_arr(Item **items, int *items_in, int *items_size) {
-  *items_size += 1;
-  *items_size = (int)*items_size * 2;
-  *items = realloc(*items, (sizeof(Item) * *items_size));
-  return *items;
+char *print_items(ItemArr items, bool list_mode) {
+  int output_size = sizeof(char) * 1024 + 1;
+  char *output_data = malloc(output_size);
+  output_data[0] = 0;
+
+  for (int i = 0; i < items.items_length; i++) {
+    Item item = items.items[i];
+    if (item.is_dir && list_mode) {
+      snprintf(output_data + strlen(output_data),
+               output_size - strlen(output_data), "%jd\t\033[96m%s\033[0m\n",
+               item.size, item.name);
+    } else if (item.is_dir && !list_mode) {
+      snprintf(output_data + strlen(output_data),
+               output_size - strlen(output_data), "\033[96m%s\033[0m  ",
+               item.name);
+    } else if (!item.is_dir && list_mode) {
+      snprintf(output_data + strlen(output_data),
+               output_size - strlen(output_data), "%jd\t%s\n", item.size,
+               item.name);
+    } else {
+      snprintf(output_data + strlen(output_data),
+               output_size - strlen(output_data), "%s  ", item.name);
+    }
+  }
+
+  return output_data;
 }
