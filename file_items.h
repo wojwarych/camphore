@@ -20,7 +20,7 @@ typedef struct {
 
 Item new_item(char *, bool, __mode_t, intmax_t);
 ItemArr *resize_arr(ItemArr *);
-ItemArr *iterate_items(DIR *d, bool all_mode);
+ItemArr *iterate_items(DIR *d, char *, bool);
 char *print_items(ItemArr, bool);
 int comp(const void *a, const void *b);
 unsigned short int permissions_mask(Item);

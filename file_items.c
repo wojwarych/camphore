@@ -16,7 +16,7 @@ ItemArr *resize_arr(ItemArr *items) {
   return items;
 }
 
-ItemArr *iterate_items(DIR *d, bool all_mode) {
+ItemArr *iterate_items(DIR *d, char *root_path, bool all_mode) {
   if (d == NULL) {
     return NULL;
   } else {
@@ -44,8 +44,13 @@ ItemArr *iterate_items(DIR *d, bool all_mode) {
         }
       }
 
+      int full_path_size = sizeof(char) * 1024 + 1;
+      char *full_path = malloc(full_path_size);
+      snprintf(full_path + strlen(full_path),
+               full_path_size - strlen(full_path), "%s/%s", root_path,
+               dir->d_name);
       struct stat path_stat;
-      stat(dir->d_name, &path_stat);
+      stat(full_path, &path_stat);
       Item item = new_item(dir->d_name, S_ISDIR(path_stat.st_mode),
                            path_stat.st_mode, (intmax_t)path_stat.st_size);
       items->items[items->items_length] = item;

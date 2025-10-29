@@ -36,7 +36,7 @@ int main(int argc, char *argv[]) {
   }
 
   DIR *d = opendir(dirpath);
-  ItemArr *items = iterate_items(d, all_mode);
+  ItemArr *items = iterate_items(d, dirpath, all_mode);
   if (items != NULL) {
 
     char *string = print_items(*items, list_mode);
