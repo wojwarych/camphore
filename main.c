@@ -43,6 +43,9 @@ int main(int argc, char *argv[]) {
     puts(string);
 
     closedir(d);
+    for (int i = 0; i < items->items_length; i++) {
+      free(items->items[i].timestamp);
+    }
     free(items->items);
     free(items);
     free(string);

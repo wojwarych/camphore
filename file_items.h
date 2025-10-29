@@ -10,6 +10,7 @@ typedef struct {
   bool is_dir;
   __mode_t type;
   intmax_t size;
+  char *timestamp;
 } Item;
 
 typedef struct {
@@ -18,7 +19,7 @@ typedef struct {
   int items_size;
 } ItemArr;
 
-Item new_item(char *, bool, __mode_t, intmax_t);
+Item new_item(char *, bool, __mode_t, intmax_t, char *);
 ItemArr *resize_arr(ItemArr *);
 ItemArr *iterate_items(DIR *d, char *, bool);
 char *print_items(ItemArr, bool);

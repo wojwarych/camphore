@@ -3,9 +3,15 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <time.h>
 
-Item new_item(char *name, bool is_dir, __mode_t type, intmax_t size) {
-  Item item = {.name = name, .is_dir = is_dir, .type = type, .size = size};
+Item new_item(char *name, bool is_dir, __mode_t type, intmax_t size,
+              char *timestamp) {
+  Item item = {.name = name,
+               .is_dir = is_dir,
+               .type = type,
+               .size = size,
+               .timestamp = timestamp};
   return item;
 }
 
@@ -46,13 +52,22 @@ ItemArr *iterate_items(DIR *d, char *root_path, bool all_mode) {
 
       int full_path_size = sizeof(char) * 1024 + 1;
       char *full_path = malloc(full_path_size);
+      full_path[0] = 0;
       snprintf(full_path + strlen(full_path),
                full_path_size - strlen(full_path), "%s/%s", root_path,
                dir->d_name);
       struct stat path_stat;
       stat(full_path, &path_stat);
-      Item item = new_item(dir->d_name, S_ISDIR(path_stat.st_mode),
-                           path_stat.st_mode, (intmax_t)path_stat.st_size);
+      free(full_path);
+
+      const char *format = "%b %d %H:%M";
+      size_t MAX_SIZE = 64;
+      char *time_fmted = malloc(sizeof(char) * MAX_SIZE);
+      strftime(time_fmted, MAX_SIZE, format, localtime(&path_stat.st_mtime));
+
+      Item item =
+          new_item(dir->d_name, S_ISDIR(path_stat.st_mode), path_stat.st_mode,
+                   (intmax_t)path_stat.st_size, time_fmted);
       items->items[items->items_length] = item;
       items->items_length++;
       dir = readdir(d);
@@ -73,21 +88,23 @@ char *print_items(ItemArr items, bool list_mode) {
     Item item = items.items[i];
     if (item.is_dir && list_mode) {
       snprintf(output_data + strlen(output_data),
-               output_size - strlen(output_data), "%jd\t\033[96m%s\033[0m\n",
-               item.size, item.name);
+               output_size - strlen(output_data), "%jd %s \033[96m%s\033[0m\n",
+               item.size, item.timestamp, item.name);
     } else if (item.is_dir && !list_mode) {
       snprintf(output_data + strlen(output_data),
                output_size - strlen(output_data), "\033[96m%s\033[0m  ",
                item.name);
     } else if (!item.is_dir && list_mode) {
       if (is_executable_file(permissions_mask(item))) {
-        const char fmt[] = "%jd\t\033[92m%s\033[0m\n";
+        const char fmt[] = "%jd %s \033[92m%s\033[0m\n";
         snprintf(output_data + strlen(output_data),
-                 output_size - strlen(output_data), fmt, item.size, item.name);
+                 output_size - strlen(output_data), fmt, item.size,
+                 item.timestamp, item.name);
       } else {
-        const char fmt[] = "%jd\t%s\n";
+        const char fmt[] = "%jd %s %s\n";
         snprintf(output_data + strlen(output_data),
-                 output_size - strlen(output_data), fmt, item.size, item.name);
+                 output_size - strlen(output_data), fmt, item.size,
+                 item.timestamp, item.name);
       }
     } else {
       if (is_executable_file(permissions_mask(item))) {
