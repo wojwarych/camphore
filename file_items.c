@@ -83,42 +83,51 @@ char *print_items(ItemArr items, bool list_mode) {
   int output_size = sizeof(char) * 1024 + 1;
   char *output_data = malloc(output_size);
   output_data[0] = 0;
-
   for (int i = 0; i < items.items_length; i++) {
     Item item = items.items[i];
-    if (item.is_dir && list_mode) {
+    format_item_string(item, output_data, output_size, list_mode);
+  }
+
+  return output_data;
+}
+
+char *format_item_string(Item item, char *output_data, int output_size,
+                         bool list_mode) {
+  if (list_mode) {
+    snprintf(output_data + strlen(output_data),
+             output_size - strlen(output_data), "%jd %s ", item.size,
+             item.timestamp);
+    if (item.is_dir) {
       snprintf(output_data + strlen(output_data),
-               output_size - strlen(output_data), "%jd %s \033[96m%s\033[0m\n",
-               item.size, item.timestamp, item.name);
-    } else if (item.is_dir && !list_mode) {
+               output_size - strlen(output_data), "\033[96m%s\033[0m\n",
+               item.name);
+    } else {
+      if (is_executable_file(permissions_mask(item))) {
+        snprintf(output_data + strlen(output_data),
+                 output_size - strlen(output_data), "\033[92m%s\033[0m\n",
+                 item.name);
+      } else {
+        snprintf(output_data + strlen(output_data),
+                 output_size - strlen(output_data), "%s\n", item.name);
+      }
+    }
+
+  } else {
+    if (item.is_dir) {
       snprintf(output_data + strlen(output_data),
                output_size - strlen(output_data), "\033[96m%s\033[0m  ",
                item.name);
-    } else if (!item.is_dir && list_mode) {
-      if (is_executable_file(permissions_mask(item))) {
-        const char fmt[] = "%jd %s \033[92m%s\033[0m\n";
-        snprintf(output_data + strlen(output_data),
-                 output_size - strlen(output_data), fmt, item.size,
-                 item.timestamp, item.name);
-      } else {
-        const char fmt[] = "%jd %s %s\n";
-        snprintf(output_data + strlen(output_data),
-                 output_size - strlen(output_data), fmt, item.size,
-                 item.timestamp, item.name);
-      }
     } else {
       if (is_executable_file(permissions_mask(item))) {
-        const char fmt[] = "\033[92m%s\033[0m ";
         snprintf(output_data + strlen(output_data),
-                 output_size - strlen(output_data), fmt, item.name);
+                 output_size - strlen(output_data), "\033[92m%s\033[0m  ",
+                 item.name);
       } else {
-        const char fmt[] = "%s ";
         snprintf(output_data + strlen(output_data),
-                 output_size - strlen(output_data), fmt, item.name);
+                 output_size - strlen(output_data), "%s  ", item.name);
       }
     }
   }
-
   return output_data;
 }
 

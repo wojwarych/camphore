@@ -23,6 +23,7 @@ Item new_item(char *, bool, __mode_t, intmax_t, char *);
 ItemArr *resize_arr(ItemArr *);
 ItemArr *iterate_items(DIR *d, char *, bool);
 char *print_items(ItemArr, bool);
+char *format_item_string(Item, char *, int, bool);
 int comp(const void *a, const void *b);
 unsigned short int permissions_mask(Item);
 bool is_executable_file(unsigned short int);
