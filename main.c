@@ -42,7 +42,7 @@ int main(int argc, char *argv[]) {
     char *string = print_items(*items, list_mode);
     puts(string);
 
-    free(d);
+    closedir(d);
     free(items->items);
     free(items);
     free(string);
