@@ -22,7 +22,8 @@ ItemArr *resize_arr(ItemArr *items) {
   return items;
 }
 
-ItemArr *iterate_items(DIR *d, char *root_path, bool all_mode) {
+ItemArr *iterate_items(DIR *d, char *root_path, bool all_mode, bool list_mode,
+                       bool recursive) {
   if (d == NULL) {
     return NULL;
   } else {
@@ -58,7 +59,6 @@ ItemArr *iterate_items(DIR *d, char *root_path, bool all_mode) {
                dir->d_name);
       struct stat path_stat;
       stat(full_path, &path_stat);
-      free(full_path);
 
       const char *format = "%b %d %H:%M";
       size_t MAX_SIZE = 64;
@@ -70,11 +70,29 @@ ItemArr *iterate_items(DIR *d, char *root_path, bool all_mode) {
                    (intmax_t)path_stat.st_size, time_fmted);
       items->items[items->items_length] = item;
       items->items_length++;
+      if (recursive && item.is_dir && strcmp(item.name, "..") != 0) {
+        DIR *d = opendir(full_path);
+        iterate_items(d, full_path, all_mode, list_mode, recursive);
+        free(full_path);
+        closedir(d);
+      }
       dir = readdir(d);
     }
 
     qsort(items->items, items->items_length, sizeof(Item), comp);
 
+    if (items != NULL) {
+
+      char *string = print_items(*items, list_mode);
+      puts(string);
+
+      for (int i = 0; i < items->items_length; i++) {
+        free(items->items[i].timestamp);
+      }
+      free(items->items);
+      free(items);
+      free(string);
+    }
     return items;
   }
 }

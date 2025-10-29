@@ -36,19 +36,7 @@ int main(int argc, char *argv[]) {
   }
 
   DIR *d = opendir(dirpath);
-  ItemArr *items = iterate_items(d, dirpath, all_mode);
-  if (items != NULL) {
-
-    char *string = print_items(*items, list_mode);
-    puts(string);
-
-    closedir(d);
-    for (int i = 0; i < items->items_length; i++) {
-      free(items->items[i].timestamp);
-    }
-    free(items->items);
-    free(items);
-    free(string);
-  }
+  iterate_items(d, dirpath, all_mode, list_mode, recursive);
+  closedir(d);
   return 0;
 }
