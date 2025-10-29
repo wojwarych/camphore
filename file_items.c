@@ -83,20 +83,39 @@ char *print_items(ItemArr items, bool list_mode) {
   int output_size = sizeof(char) * 1024 + 1;
   char *output_data = malloc(output_size);
   output_data[0] = 0;
+  int largest_int = 0;
   for (int i = 0; i < items.items_length; i++) {
     Item item = items.items[i];
-    format_item_string(item, output_data, output_size, list_mode);
+    if (items.items[i].size > largest_int) {
+      largest_int = item.size;
+    }
+  }
+
+  for (int i = 0; i < items.items_length; i++) {
+    Item item = items.items[i];
+    format_item_string(item, output_data, output_size, list_mode,
+                       largest_size_length(largest_int));
   }
 
   return output_data;
 }
 
+int largest_size_length(int large_int) {
+  int length = 0;
+  int x = large_int;
+  while (x > 0) {
+    x = x / 10;
+    length++;
+  }
+  return length;
+}
+
 char *format_item_string(Item item, char *output_data, int output_size,
-                         bool list_mode) {
+                         bool list_mode, int longest_size) {
   if (list_mode) {
     snprintf(output_data + strlen(output_data),
-             output_size - strlen(output_data), "%jd %s ", item.size,
-             item.timestamp);
+             output_size - strlen(output_data), "%*jd %s ", longest_size,
+             item.size, item.timestamp);
     if (item.is_dir) {
       snprintf(output_data + strlen(output_data),
                output_size - strlen(output_data), "\033[96m%s\033[0m\n",
