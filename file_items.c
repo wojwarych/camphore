@@ -1,9 +1,21 @@
 #include "file_items.h"
 #include <dirent.h>
+#include <errno.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 #include <time.h>
+
+ItemArr new_item_arr() {
+  ItemArr arr = {
+      .items = malloc(sizeof(Item)), .items_length = 0, .items_size = 1};
+  if (arr.items == NULL) {
+    fprintf(stderr, "Couldn't allocate memory for Item!\n");
+    errno = 12;
+    exit(ENOMEM);
+  }
+  return arr;
+}
 
 Item new_item(char *name, bool is_dir, __mode_t type, intmax_t size,
               char *timestamp) {
@@ -15,86 +27,139 @@ Item new_item(char *name, bool is_dir, __mode_t type, intmax_t size,
   return item;
 }
 
-ItemArr *resize_arr(ItemArr *items) {
-  items->items_size += 1;
-  items->items_size = items->items_size * 2;
-  items->items = realloc(items->items, (sizeof(Item) * items->items_size));
+ItemArr resize_arr(ItemArr items) {
+  items.items_size += 1;
+  items.items_size = items.items_size * 2;
+  items.items = realloc(items.items, (sizeof(Item) * items.items_size));
+  if (items.items == NULL) {
+    fprintf(stderr, "Couldn't reallocate memory for Item array!\n");
+    errno = 12;
+    exit(ENOMEM);
+  }
   return items;
 }
 
-ItemArr *iterate_items(DIR *d, char *root_path, bool all_mode, bool list_mode,
-                       bool recursive) {
-  if (d == NULL) {
-    return NULL;
-  } else {
+ItemArr iterate_items(DIR *d, char *root_path, bool all_mode, bool list_mode,
+                      bool recursive) {
+  ItemArr items = new_item_arr();
 
-    ItemArr *items = malloc(sizeof(ItemArr));
-    Item *item = malloc(sizeof(Item));
-    items->items = item;
-    if (items == NULL) {
-      return NULL;
+  errno = 0;
+  for (struct dirent *dir = readdir(d); dir != NULL; dir = readdir(d)) {
+    if (errno) {
+      fprintf(stderr, "Error while reading directory %s\n", root_path);
+      exit(errno);
     }
-    items->items_size = 1;
-    items->items_length = 0;
+    if (dir->d_name[0] == '.' && !all_mode) {
+      continue;
+    }
+    if (items.items_length == items.items_size) {
+      items = resize_arr(items);
+    }
 
-    struct dirent *dir = readdir(d);
-    while (dir != NULL) {
-      if ((strcmp(dir->d_name, ".") == 0 || strcmp(dir->d_name, "..") == 0) &&
-          !all_mode) {
-        dir = readdir(d);
-        continue;
-      }
-      if (items->items_length == items->items_size) {
-        items = resize_arr(items);
-        if (items == NULL) {
-          return NULL;
-        }
-      }
+    int full_path_size = sizeof(char) * 1024 + 1;
+    char *full_path = malloc(full_path_size);
+    if (full_path == NULL) {
+      fprintf(stderr, "Couldn't allocate memory for full_path char buffer!\n");
+      errno = 12;
+      exit(ENOMEM);
+    }
 
-      int full_path_size = sizeof(char) * 1024 + 1;
-      char *full_path = malloc(full_path_size);
-      full_path[0] = 0;
-      snprintf(full_path + strlen(full_path),
-               full_path_size - strlen(full_path), "%s/%s", root_path,
-               dir->d_name);
-      struct stat path_stat;
-      stat(full_path, &path_stat);
+    full_path[0] = 0;
+    snprintf(full_path + strlen(full_path), full_path_size - strlen(full_path),
+             "%s/%s", root_path, dir->d_name);
 
-      const char *format = "%b %d %H:%M";
-      size_t MAX_SIZE = 64;
-      char *time_fmted = malloc(sizeof(char) * MAX_SIZE);
-      strftime(time_fmted, MAX_SIZE, format, localtime(&path_stat.st_mtime));
+    struct stat path_stat;
+    if (stat(full_path, &path_stat) != 0) {
+      fprintf(stderr, "Couldn't access 'stat()' for path: %s. Error: %d\n",
+              full_path, errno);
+      continue;
+    }
 
+    const char *format = "%b %d %H:%M";
+    size_t MAX_SIZE = 64;
+    char *time_fmted = malloc(sizeof(char) * MAX_SIZE);
+    if (time_fmted == NULL) {
+      fprintf(stderr,
+              "Couldn't allocate memory for time format char buffer!\n");
+      errno = 12;
+      exit(ENOMEM);
+    }
+    int ret_buffer =
+        strftime(time_fmted, MAX_SIZE, format, localtime(&path_stat.st_mtime));
+    if (ret_buffer > 0) {
       Item item =
           new_item(dir->d_name, S_ISDIR(path_stat.st_mode), path_stat.st_mode,
                    (intmax_t)path_stat.st_size, time_fmted);
-      items->items[items->items_length] = item;
-      items->items_length++;
-      if (recursive && item.is_dir && strcmp(item.name, "..") != 0) {
-        DIR *d = opendir(full_path);
-        iterate_items(d, full_path, all_mode, list_mode, recursive);
-        free(full_path);
-        closedir(d);
-      }
-      dir = readdir(d);
+      items.items[items.items_length] = item;
+      items.items_length++;
+    } else {
+      fprintf(stderr,
+              "Buffer exceeded for strftime() for timestamp of path: %s\n",
+              full_path);
     }
-
-    qsort(items->items, items->items_length, sizeof(Item), comp);
-
-    if (items != NULL) {
-
-      char *string = print_items(*items, list_mode);
-      puts(string);
-
-      for (int i = 0; i < items->items_length; i++) {
-        free(items->items[i].timestamp);
-      }
-      free(items->items);
-      free(items);
-      free(string);
-    }
-    return items;
+    free(full_path);
   }
+
+  qsort(items.items, items.items_length, sizeof(Item), comp);
+
+  char *string = print_items(items, list_mode);
+  puts(string);
+
+  if (recursive) {
+    for (int i = 0; i < items.items_length; i++) {
+      Item item = items.items[i];
+      if (!item.is_dir) {
+        continue;
+      }
+      if (item.is_dir && strlen(item.name) == 1 && item.name[0] == '.') {
+        continue;
+      }
+      if (item.is_dir && strlen(item.name) == 2 &&
+          strncmp(item.name, "..", 2) == 0) {
+        continue;
+      }
+      int full_path_size = sizeof(char) * 1024 + 1;
+      char *full_path = malloc(full_path_size);
+      if (full_path == NULL) {
+        fprintf(stderr, "Couldn't allocate memory for full_path char buffer!");
+        errno = 12;
+        exit(ENOMEM);
+      }
+      full_path[0] = 0;
+      snprintf(full_path + strlen(full_path),
+               full_path_size - strlen(full_path), "%s/%s", root_path,
+               item.name);
+
+      DIR *d = opendir(full_path);
+      if (d == NULL) {
+        fprintf(stderr, "Could not access directory: %s %s", item.name,
+                root_path);
+        continue;
+      }
+
+      struct stat path_stat;
+      if (stat(full_path, &path_stat) != 0) {
+        fprintf(stderr,
+                "Couldn't access 'stat()' for path: %s. Root path: %s; "
+                "Error: %d\n",
+                full_path, root_path, errno);
+        continue;
+      }
+
+      printf("%s:\n", full_path);
+      iterate_items(d, full_path, all_mode, list_mode, recursive);
+      closedir(d);
+      free(full_path);
+    }
+  }
+
+  for (int i = 0; i < items.items_length; i++) {
+    free(items.items[i].timestamp);
+  }
+
+  free(items.items);
+  free(string);
+  return items;
 }
 
 char *print_items(ItemArr items, bool list_mode) {

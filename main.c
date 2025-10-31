@@ -1,5 +1,6 @@
 #include "file_items.h"
 #include <dirent.h>
+#include <errno.h>
 #include <getopt.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -36,7 +37,24 @@ int main(int argc, char *argv[]) {
   }
 
   DIR *d = opendir(dirpath);
-  iterate_items(d, dirpath, all_mode, list_mode, recursive);
-  closedir(d);
-  return 0;
+  if (d == NULL) {
+    switch
+      errno {
+      case ENOENT:
+        fprintf(stderr, "Directory named: %s does not exists!\n", dirpath);
+        break;
+      case EACCES:
+        fprintf(stderr, "Permission denied for directory %s\n", dirpath);
+        break;
+      default:
+        fprintf(stderr, "Unknown error! %d", errno);
+        break;
+      }
+    return errno;
+  } else {
+
+    iterate_items(d, dirpath, all_mode, list_mode, recursive);
+    closedir(d);
+    return 0;
+  }
 }
