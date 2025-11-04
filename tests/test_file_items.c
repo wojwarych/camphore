@@ -4,6 +4,10 @@
 #include <criterion/parameterized.h>
 #include <stdio.h>
 
+struct bitmask_value_format {
+  int bitmask_value;
+};
+
 struct long_integers {
   int long_int;
   int length;
