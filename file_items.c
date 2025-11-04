@@ -245,11 +245,11 @@ unsigned short int permissions_mask(Item item) { return item.type & 0777; }
 bool is_executable_file(unsigned short int permission_mask) {
   while (permission_mask > 0) {
     int mask = 0;
-    mask = permission_mask % 8;
+    mask = permission_mask % 10;
     if (mask == 7 || mask == 3 || mask == 1) {
       return true;
     }
-    permission_mask = permission_mask / 8;
+    permission_mask = permission_mask / 10;
   }
 
   return false;
