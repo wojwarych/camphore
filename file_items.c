@@ -8,7 +8,7 @@
 
 ItemArr new_item_arr() {
   ItemArr arr = {
-      .items = malloc(sizeof(Item)), .items_length = 0, .items_size = 1};
+    .items = malloc(sizeof(Item)), .items_length = 0, .items_size = 1};
   if (arr.items == NULL) {
     fprintf(stderr, "Couldn't allocate memory for Item!\n");
     errno = 12;
@@ -18,12 +18,12 @@ ItemArr new_item_arr() {
 }
 
 Item new_item(char *name, bool is_dir, __mode_t type, intmax_t size,
-              char *timestamp) {
+    char *timestamp) {
   Item item = {.name = name,
-               .is_dir = is_dir,
-               .type = type,
-               .size = size,
-               .timestamp = timestamp};
+    .is_dir = is_dir,
+    .type = type,
+    .size = size,
+    .timestamp = timestamp};
   return item;
 }
 
@@ -40,7 +40,7 @@ ItemArr resize_arr(ItemArr items) {
 }
 
 ItemArr iterate_items(DIR *d, char *root_path, bool all_mode, bool list_mode,
-                      bool recursive) {
+    bool recursive) {
   ItemArr items = new_item_arr();
 
   errno = 0;
@@ -66,12 +66,12 @@ ItemArr iterate_items(DIR *d, char *root_path, bool all_mode, bool list_mode,
 
     full_path[0] = 0;
     snprintf(full_path + strlen(full_path), full_path_size - strlen(full_path),
-             "%s/%s", root_path, dir->d_name);
+        "%s/%s", root_path, dir->d_name);
 
     struct stat path_stat;
     if (stat(full_path, &path_stat) != 0) {
       fprintf(stderr, "Couldn't access 'stat()' for path: %s. Error: %d\n",
-              full_path, errno);
+          full_path, errno);
       continue;
     }
 
@@ -80,22 +80,22 @@ ItemArr iterate_items(DIR *d, char *root_path, bool all_mode, bool list_mode,
     char *time_fmted = malloc(sizeof(char) * MAX_SIZE);
     if (time_fmted == NULL) {
       fprintf(stderr,
-              "Couldn't allocate memory for time format char buffer!\n");
+          "Couldn't allocate memory for time format char buffer!\n");
       errno = 12;
       exit(ENOMEM);
     }
     int ret_buffer =
-        strftime(time_fmted, MAX_SIZE, format, localtime(&path_stat.st_mtime));
+      strftime(time_fmted, MAX_SIZE, format, localtime(&path_stat.st_mtime));
     if (ret_buffer > 0) {
       Item item =
-          new_item(dir->d_name, S_ISDIR(path_stat.st_mode), path_stat.st_mode,
-                   (intmax_t)path_stat.st_size, time_fmted);
+        new_item(dir->d_name, S_ISDIR(path_stat.st_mode), path_stat.st_mode,
+            (intmax_t)path_stat.st_size, time_fmted);
       items.items[items.items_length] = item;
       items.items_length++;
     } else {
       fprintf(stderr,
-              "Buffer exceeded for strftime() for timestamp of path: %s\n",
-              full_path);
+          "Buffer exceeded for strftime() for timestamp of path: %s\n",
+          full_path);
     }
     free(full_path);
   }
@@ -127,22 +127,22 @@ ItemArr iterate_items(DIR *d, char *root_path, bool all_mode, bool list_mode,
       }
       full_path[0] = 0;
       snprintf(full_path + strlen(full_path),
-               full_path_size - strlen(full_path), "%s/%s", root_path,
-               item.name);
+          full_path_size - strlen(full_path), "%s/%s", root_path,
+          item.name);
 
       DIR *d = opendir(full_path);
       if (d == NULL) {
         fprintf(stderr, "Could not access directory: %s %s", item.name,
-                root_path);
+            root_path);
         continue;
       }
 
       struct stat path_stat;
       if (stat(full_path, &path_stat) != 0) {
         fprintf(stderr,
-                "Couldn't access 'stat()' for path: %s. Root path: %s; "
-                "Error: %d\n",
-                full_path, root_path, errno);
+            "Couldn't access 'stat()' for path: %s. Root path: %s; "
+            "Error: %d\n",
+            full_path, root_path, errno);
         continue;
       }
 
@@ -177,7 +177,7 @@ char *print_items(ItemArr items, bool list_mode) {
   for (int i = 0; i < items.items_length; i++) {
     Item item = items.items[i];
     format_item_string(item, output_data, output_size, list_mode,
-                       largest_size_length(largest_int));
+        largest_size_length(largest_int));
   }
 
   return output_data;
@@ -194,39 +194,39 @@ int largest_size_length(int large_int) {
 }
 
 char *format_item_string(Item item, char *output_data, int output_size,
-                         bool list_mode, int longest_size) {
+    bool list_mode, int longest_size) {
   if (list_mode) {
     snprintf(output_data + strlen(output_data),
-             output_size - strlen(output_data), "%*jd %s ", longest_size,
-             item.size, item.timestamp);
+        output_size - strlen(output_data), "%*jd %s ", longest_size,
+        item.size, item.timestamp);
     if (item.is_dir) {
       snprintf(output_data + strlen(output_data),
-               output_size - strlen(output_data), "\033[96m%s\033[0m\n",
-               item.name);
+          output_size - strlen(output_data), "\033[96m%s\033[0m\n",
+          item.name);
     } else {
       if (is_executable_file(permissions_mask(item))) {
         snprintf(output_data + strlen(output_data),
-                 output_size - strlen(output_data), "\033[92m%s\033[0m\n",
-                 item.name);
+            output_size - strlen(output_data), "\033[92m%s\033[0m\n",
+            item.name);
       } else {
         snprintf(output_data + strlen(output_data),
-                 output_size - strlen(output_data), "%s\n", item.name);
+            output_size - strlen(output_data), "%s\n", item.name);
       }
     }
 
   } else {
     if (item.is_dir) {
       snprintf(output_data + strlen(output_data),
-               output_size - strlen(output_data), "\033[96m%s\033[0m  ",
-               item.name);
+          output_size - strlen(output_data), "\033[96m%s\033[0m  ",
+          item.name);
     } else {
       if (is_executable_file(permissions_mask(item))) {
         snprintf(output_data + strlen(output_data),
-                 output_size - strlen(output_data), "\033[92m%s\033[0m  ",
-                 item.name);
+            output_size - strlen(output_data), "\033[92m%s\033[0m  ",
+            item.name);
       } else {
         snprintf(output_data + strlen(output_data),
-                 output_size - strlen(output_data), "%s  ", item.name);
+            output_size - strlen(output_data), "%s  ", item.name);
       }
     }
   }
@@ -245,11 +245,11 @@ unsigned short int permissions_mask(Item item) { return item.type & 0777; }
 bool is_executable_file(unsigned short int permission_mask) {
   while (permission_mask > 0) {
     int mask = 0;
-    mask = permission_mask % 10;
+    mask = permission_mask % 8;
     if (mask == 7 || mask == 3 || mask == 1) {
       return true;
     }
-    permission_mask = permission_mask / 10;
+    permission_mask = permission_mask / 8;
   }
 
   return false;

@@ -54,9 +54,9 @@ ParameterizedTest(struct long_integers *param, file_items,
 
 ParameterizedTestParameters(file_items, is_executable_file) {
   static struct executable_file_permission_mask params[] = {
-      {1, true},   {10, true}, {100, true}, {101, true},  {110, true},
-      {111, true}, {3, true},  {30, true},  {300, true},  {330, true},
-      {303, true}, {0, false}, {20, false}, {200, false}, {640, false}};
+      {0001, true},   {0010, true}, {0100, true}, {0101, true},  {0110, true},
+      {0111, true}, {0003, true},  {0030, true},  {0300, true},  {0330, true},
+      {0303, true}, {0000, false}, {0020, false}, {0200, false}, {0640, false}};
   size_t nb_params =
       sizeof(params) / sizeof(struct executable_file_permission_mask);
   return cr_make_param_array(struct executable_file_permission_mask, params,
